@@ -34,7 +34,8 @@
           lists:[],
           ws:{},
           isShow:true,
-          name:''
+          name:'',
+          num:''
         }
       },
       mounted() {
@@ -49,13 +50,20 @@
           console.log('open'+this.ws.readyState) // 1
         },
         onMessage(event){
+          if(this.isShow) return //用户没进入聊天室 就不接收消息
           console.log('message'+this.ws.readyState) // 1
           var obj = JSON.parse(event.data)
           if(obj.event==='enter'){
             this.lists.push('欢迎'+obj.message+'加入聊天室')
-          }else {
-            this.lists.push(obj.name+":"+obj.message)
+          }else if(obj.event ==='out'){
+            this.lists.push(obj.name+'离开了聊天室')
           }
+          else {
+            if(obj.name!==this.name){
+              this.lists.push(obj.name+":"+obj.message)
+            }
+          }
+          this.num = obj.num
         },
         onClose(){
           console.log('close'+ ws.readyState)  //  close: 服务端断开 3  客户端主动断开 3

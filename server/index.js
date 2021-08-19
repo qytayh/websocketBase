@@ -1,5 +1,8 @@
 const WebSocket = require("ws");
-const wss = new WebSocket.Server({ port: 3000 });
+const wss = new WebSocket.Server({ port:3000});
+// const http = require('http')
+// const server = http.createServer()
+const jwt = require('jsonwebtoken')
 
 let num = 0;
 let group ={}
@@ -18,6 +21,27 @@ wss.on("connection", function connection(ws) {
       }else{
         group[ws.roomid]++
       }
+    }
+    if(msgObj.event === 'auth'){
+      jwt.verify(msgObj.message,'secret',(err,decode)=>{
+        if(err){
+          // 鉴权失败
+          return 
+        }else{
+          // 鉴权成功
+          console.log(decode)
+          ws.isAuth = true
+          return 
+        }
+      })
+    }
+    if(!ws.isAuth){
+      // 非鉴权的请求
+      ws.send(JSON.stringify({
+        event:"noAuth",
+        message:'please auth again'
+      }))
+      return
     }
     // ws.send(msg)
     // 广播消息

@@ -50,11 +50,20 @@
       methods: {
         onOpen(){
           console.log('open'+this.ws.readyState) // 1
+          // 发起鉴权请求
+          this.ws.send(JSON.stringify({
+            event:'auth',
+            message:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Impva2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.DYqxr84XR0PIpUq_Q__RULasbogmu3ZbRnGtgmMhuBw'
+          }))
         },
         onMessage(event){
           if(this.isShow) return //用户没进入聊天室 就不接收消息
           console.log('message'+this.ws.readyState) // 1
           var obj = JSON.parse(event.data)
+          if(obj.event==='noAuth'){
+            // 鉴权失败
+            // 重新获取token
+          }
           if(obj.event==='enter'){
             this.lists.push('欢迎'+obj.message+'加入聊天室')
           }else if(obj.event ==='out'){

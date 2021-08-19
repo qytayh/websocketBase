@@ -1,47 +1,56 @@
 const WebSocket = require("ws");
-const wss = new WebSocket.Server({ port:3000});
+const wss = new WebSocket.Server({ port: 3000 });
 // const http = require('http')
 // const server = http.createServer()
-const jwt = require('jsonwebtoken')
+const jwt = require("jsonwebtoken");
+const timeInterval = 1000;
 
-let num = 0;
-let group ={}
+let group = {};
 // 多聊天室功能
 // 对相同的roomid进行广播
 wss.on("connection", function connection(ws) {
+  ws.isAlive = true; //设置初始状态为true
   // 接收客户端的消息
   ws.on("message", function (msg) {
     const msgObj = JSON.parse(msg);
     if (msgObj.event === "enter") {
+
       ws.name = msgObj.message;
       ws.roomid = msgObj.roomid;
-      num++;
-      if(typeof group[ws.roomid] === undefined){
-        group[ws.roomid]=1
-      }else{
-        group[ws.roomid]++
+      if (!group[ws.roomid]) {
+        group[ws.roomid] = 1;
+      } else {
+        group[ws.roomid]++;
       }
     }
-    if(msgObj.event === 'auth'){
-      jwt.verify(msgObj.message,'secret',(err,decode)=>{
-        if(err){
+    if (msgObj.event === "auth") {
+      jwt.verify(msgObj.message, "secret", (err, decode) => {
+        if (err) {
           // 鉴权失败
-          return 
-        }else{
+          ws.send(
+            JSON.stringify({
+              event: "noAuth",
+              message: "please auth again",
+            })
+          );
+          return;
+        } else {
           // 鉴权成功
-          console.log(decode)
-          ws.isAuth = true
-          return 
+          console.log(decode);
+          ws.isAuth = true;
+          return;
         }
-      })
+      });
+      return;
     }
-    if(!ws.isAuth){
+    if (!ws.isAuth) {
       // 非鉴权的请求
-      ws.send(JSON.stringify({
-        event:"noAuth",
-        message:'please auth again'
-      }))
-      return
+      return;
+    }
+    // 心跳检测
+    if (msgObj.event === "heartbeat" && msgObj.message === "pong") {
+      ws.isAlive = true;
+      return;
     }
     // ws.send(msg)
     // 广播消息
@@ -51,10 +60,10 @@ wss.on("connection", function connection(ws) {
       //   msgObj.num = wss.clients.size
       //   client.send(JSON.stringify(msgObj))
       // }
-      if (client.readyState === WebSocket.OPEN&& client.roomid ===ws.roomid) {
+      if (client.readyState === WebSocket.OPEN && client.roomid === ws.roomid) {
         // 为了获取在线的聊天人数
         msgObj.num = group[ws.roomid];
-        msgObj.name = ws.name
+        msgObj.name = ws.name;
         client.send(JSON.stringify(msgObj));
       }
     });
@@ -64,19 +73,38 @@ wss.on("connection", function connection(ws) {
 
   // 当ws客户端断开
   ws.on("close", function () {
-    if(ws.name){
+    if (ws.name) {
       group[ws.roomid]--;
     }
-    let msgObj = {}
+    let msgObj = {};
     // 广播消息
     wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN&& client.roomid ===ws.roomid) {
+      if (client.readyState === WebSocket.OPEN && client.roomid === ws.roomid) {
         // 为了获取在线的聊天人数
         msgObj.num = group[ws.roomid];
         msgObj.name = ws.name;
-        msgObj.event = 'out'
+        msgObj.event = "out";
         client.send(JSON.stringify(msgObj));
       }
     });
   });
 });
+
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (!ws.isAlive) {
+      group[ws.roomid]--;
+      return ws.terminate(); //关闭ws链接
+    }
+    // 主动发送心跳检测请求
+    // 当客户端返回了消息后，主动设置flag为在线
+    ws.isAlive = false;
+    ws.send(
+      JSON.stringify({
+        event: "heartbeat",
+        message: "ping",
+        num: group[ws.roomid]
+      })
+    );
+  });
+}, timeInterval);

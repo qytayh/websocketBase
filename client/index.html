@@ -1,135 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.common.dev.min.js" integrity="sha512-TpgbLHXaTCAZ7ULhjopb1PveTz5Jx6KEQUtMfXhV0m0EArh+6O8ybZjjDN1Yug6oagN6iFm6EoMjuYSiFr0qXQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <title>Document</title>
-</head>
-<body>
-  <div id="app">
-    <div v-if="isShow">
-      <p>昵称<input v-model="name" /></p>
-      <p>房间号<input v-model="roomid" /></p>
-      <button type="button" @click="enter">进入聊天室</button>
-    </div>
-    <div v-else>
-      <ul>
-        <li v-for="(item,index) in lists" :key="index">{{item}}</li>
-      </ul>
-      <div class="ctrl">
-        <input type="text" id="msg" v-model="message" />
-        <button type="button" id="send" @click="sendMsg">发送</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.common.dev.min.js"
+      integrity="sha512-TpgbLHXaTCAZ7ULhjopb1PveTz5Jx6KEQUtMfXhV0m0EArh+6O8ybZjjDN1Yug6oagN6iFm6EoMjuYSiFr0qXQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app">
+      <div v-if="isShow">
+        <p>昵称<input v-model="name" /></p>
+        <p>房间号<input v-model="roomid" /></p>
+        <button type="button" @click="enter">进入聊天室</button>
+      </div>
+      <div v-else>
+        <ul>
+          <li v-for="(item,index) in lists" :key="index">{{item}}</li>
+          <li>在线人数{{num}}</li>
+        </ul>
+        <div class="ctrl">
+          <input type="text" id="msg" v-model="message" />
+          <button type="button" id="send" @click="sendMsg">发送</button>
+        </div>
       </div>
     </div>
-    
-  </div>
- 
-  <script>
-    var app = new Vue({
-      el:"#app",
-      data(){
-        return {
-          message:'',
-          lists:[],
-          ws:{},
-          isShow:true,
-          name:'',
-          num:'',
-          roomid:''
-        }
-      },
-      mounted() {
-        this.ws = new WebSocket('ws://127.0.0.1:3000')
-        this.ws.onopen = this.onOpen
-        this.ws.onmessage = this.onMessage
-        this.ws.onclose = this.onClose
-        this.ws.onerror = this.onError
-      },
-      methods: {
-        onOpen(){
-          console.log('open'+this.ws.readyState) // 1
-          // 发起鉴权请求
-          this.ws.send(JSON.stringify({
-            event:'auth',
-            message:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Impva2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.DYqxr84XR0PIpUq_Q__RULasbogmu3ZbRnGtgmMhuBw'
-          }))
+
+    <script>
+      var app = new Vue({
+        el: "#app",
+        data() {
+          return {
+            message: "",
+            lists: [],
+            ws: {},
+            isShow: true,
+            name: "",
+            num: "",
+            roomid: "",
+          };
         },
-        onMessage(event){
-          if(this.isShow) return //用户没进入聊天室 就不接收消息
-          console.log('message'+this.ws.readyState) // 1
-          var obj = JSON.parse(event.data)
-          if(obj.event==='noAuth'){
-            // 鉴权失败
-            // 重新获取token
-          }
-          if(obj.event==='enter'){
-            this.lists.push('欢迎'+obj.message+'加入聊天室')
-          }else if(obj.event ==='out'){
-            this.lists.push(obj.name+'离开了聊天室')
-          }
-          else {
-            if(obj.name!==this.name){
-              this.lists.push(obj.name+":"+obj.message)
+       
+        methods: {
+          initWS(){
+            this.ws = new WebSocket("ws://127.0.0.1:3000");
+            this.ws.onopen = this.onOpen;
+            this.ws.onmessage = this.onMessage;
+            this.ws.onclose = this.onClose;
+            this.ws.onerror = this.onError;
+          },
+          onOpen() {
+            this.ws.send(
+              JSON.stringify({
+                event: "auth",
+                message:
+                  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Impva2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.DYqxr84XR0PIpUq_Q__RULasbogmu3ZbRnGtgmMhuBw",
+              })
+            );
+            console.log("open" + this.ws.readyState); // 1
+            this.ws.send(
+              JSON.stringify({
+                event: "enter",
+                message: this.name,
+                roomid: this.roomid,
+              })
+            );
+            // 发起鉴权请求
+           
+          },
+          onMessage(event) {
+            if (this.isShow) return; //用户没进入聊天室 就不接收消息
+            console.log("message" + this.ws.readyState); // 1
+            var obj = JSON.parse(event.data);
+            switch (obj.event) {
+              case "noAuth":
+                // 鉴权失败
+                // 重新获取token
+                break;
+              case "enter":
+                this.lists.push("欢迎" + obj.message + "加入聊天室");
+                break;
+              case "out":
+                this.lists.push(obj.name + "离开了聊天室");
+                break;
+              case 'heartbeat':
+                this.ws.send(JSON.stringify({
+                  event:'heartbeat',
+                  message:'pong'
+                }))
+                break;
+              default:
+                if (obj.name !== this.name) {
+                  this.lists.push(obj.name + ":" + obj.message);
+                }
             }
-          }
-          this.num = obj.num
+            this.num = obj.num;
+          },
+          onClose() {
+            console.log("close" + ws.readyState); //  close: 服务端断开 3  客户端主动断开 3
+            console.log("yiguanbi");
+          },
+          onError() {
+            console.log("error" + ws.readyState); //  erroe:3
+          },
+          sendMsg() {
+            this.lists.push(this.name + ":" + this.message);
+            this.ws.send(
+              JSON.stringify({
+                event: "message",
+                message: this.message,
+                name: this.name,
+              })
+            );
+            this.message = "";
+          },
+          enter() {
+            if (this.name.trim() === "") {
+              alert("用户名不得为空");
+              return;
+            }
+            this.initWS()
+            this.isShow = false;
+          },
         },
-        onClose(){
-          console.log('close'+ ws.readyState)  //  close: 服务端断开 3  客户端主动断开 3
-          console.log('yiguanbi')
-        },
-        onError(){
-          console.log('error'+ ws.readyState)  //  erroe:3
-        },
-        sendMsg(){
-          this.lists.push(this.name+":"+this.message)
-          this.ws.send(JSON.stringify({
-            event:'message',
-            message:this.message,
-            name:this.name
-          }))
-          this.message=''
-        },
-        enter(){
-          if(this.name.trim()==='')  {
-            alert('用户名不得为空')
-            return
-          }
-          this.isShow=false
-          this.ws.send(JSON.stringify({
-            event:'enter',
-            message:this.name,
-            roomid:this.roomid
-          }))
-        }
-      },
-    }) 
-    // var ws =  new WebSocket('ws://127.0.0.1:3000')
-    // ws.onopen = function(){
-    //   console.log('open'+ws.readyState) // 1
-     
-    // }
-    // ws.onmessage = function(msg){
-    //   console.log('message'+ws.readyState) // 1
-    //   console.log(msg.data)
-    // }
-    // // 连接主动断开时触发
-    // ws.onclose = function(){
-    //   console.log('close'+ ws.readyState)  //  close: 服务端断开 3  客户端主动断开 3
-    //   console.log('yiguanbi')
-    // }
-    // // 当连接失败触发error事件
-    // ws.onerror = function(){
-    //   console.log('error'+ ws.readyState)  //  erroe:3
-    // }
-    // // 发送消息
-    // document.getElementById('send').addEventListener('click',function(){
-    //   var inputValue = document.getElementById('msg').value
-    //   ws.send(inputValue)
-    //   inputValue=''
-    // })
-  </script>
-</body>
+      });
+      // var ws =  new WebSocket('ws://127.0.0.1:3000')
+      // ws.onopen = function(){
+      //   console.log('open'+ws.readyState) // 1
+
+      // }
+      // ws.onmessage = function(msg){
+      //   console.log('message'+ws.readyState) // 1
+      //   console.log(msg.data)
+      // }
+      // // 连接主动断开时触发
+      // ws.onclose = function(){
+      //   console.log('close'+ ws.readyState)  //  close: 服务端断开 3  客户端主动断开 3
+      //   console.log('yiguanbi')
+      // }
+      // // 当连接失败触发error事件
+      // ws.onerror = function(){
+      //   console.log('error'+ ws.readyState)  //  erroe:3
+      // }
+      // // 发送消息
+      // document.getElementById('send').addEventListener('click',function(){
+      //   var inputValue = document.getElementById('msg').value
+      //   ws.send(inputValue)
+      //   inputValue=''
+      // })
+    </script>
+  </body>
 </html>
